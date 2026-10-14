@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-950 text-slate-100">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Task & Notes Mobile App</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Font Family -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: none;
+        }
+        /* Custom scrollbar hiding for clean UI */
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col max-w-md mx-auto relative overflow-hidden bg-slate-950 border-x border-slate-800 shadow-2xl">
+
+    <!-- Header Section -->
+    <header class="pt-8 px-5 pb-4 bg-slate-900/80 backdrop-blur-md border-b border-slate-800/80 sticky top-0 z-20">
+        <div class="flex items-center justify-between mb-4">
+            <div>
+                <p class="text-xs uppercase tracking-wider text-indigo-400 font-semibold" id="currentDate">Today</p>
+                <h1 class="text-2xl font-bold tracking-tight text-white">My Workspace</h1>
+            </div>
+            <button id="addBtn" class="w-10 h-10 rounded-full bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition-all flex items-center justify-center text-white shadow-lg shadow-indigo-600/30">
+                <i data-lucide="plus" class="w-6 h-6"></i>
+            </button>
+        </div>
+
+        <!-- Progress Bar -->
+        <div class="bg-slate-800/60 rounded-xl p-3 border border-slate-800">
+            <div class="flex justify-between items-center text-xs text-slate-400 mb-1.5 font-medium">
+                <span>Task Completion</span>
+                <span id="progressText" class="text-indigo-400 font-semibold">0%</span>
+            </div>
+            <div class="w-full h-2 bg-slate-700/50 rounded-full overflow-hidden">
+                <div id="progressBar" class="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 w-0 transition-all duration-500 ease-out"></div>
+            </div>
+        </div>
+
+        <!-- Category Filters (Horizontal Scroll) -->
+        <div class="flex items-center gap-2 mt-4 overflow-x-auto no-scrollbar pb-1" id="filterContainer">
+            <button data-filter="all" class="filter-btn active px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all bg-indigo-600 text-white">All</button>
+            <button data-filter="Personal" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all bg-slate-800 text-slate-400 hover:text-slate-200">Personal</button>
+            <button data-filter="Work" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all bg-slate-800 text-slate-400 hover:text-slate-200">Work</button>
+            <button data-filter="Ideas" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all bg-slate-800 text-slate-400 hover:text-slate-200">Ideas</button>
+            <button data-filter="completed" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap transition-all bg-slate-800 text-slate-400 hover:text-slate-200">Done</button>
+        </div>
+    </header>
+
+    <!-- Task List Scrollable Container -->
+    <main class="flex-1 overflow-y-auto px-5 py-4 space-y-3 no-scrollbar pb-24" id="taskList">
+        <!-- Tasks dynamically rendered here -->
+    </main>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="hidden absolute inset-0 flex flex-col items-center justify-center p-6 text-center pointer-events-none mt-16">
+        <div class="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 mb-3">
+            <i data-lucide="check-circle-2" class="w-8 h-8"></i>
+        </div>
+        <h3 class="text-base font-semibold text-slate-300">All clear for now!</h3>
+        <p class="text-xs text-slate-500 mt-1 max-w-[200px]">Tap the blue '+' button above to add a new task or note.</p>
+    </div>
+
+    <!-- Modal Form (Create / Edit Task) -->
+    <div id="modal" class="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-end sm:items-center justify-center opacity-0 pointer-events-none transition-opacity duration-300">
+        <div id="modalContent" class="bg-slate-900 border border-slate-800 w-full max-w-md rounded-t-3xl sm:rounded-2xl p-6 transform translate-y-full sm:translate-y-0 transition-transform duration-300 shadow-2xl">
+            <div class="flex items-center justify-between mb-5">
+                <h2 class="text-lg font-bold text-white" id="modalTitle">Add New Item</h2>
+                <button id="closeModal" class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+
+            <form id="taskForm" class="space-y-4">
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Title</label>
+                    <input type="text" id="taskTitle" required placeholder="What needs to be done?" class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Category</label>
+                    <div class="grid grid-cols-3 gap-2">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="category" value="Personal" checked class="peer sr-only">
+                            <div class="text-center py-2 px-3 rounded-xl border border-slate-800 bg-slate-950 text-xs font-medium text-slate-400 peer-checked:border-indigo-500 peer-checked:bg-indigo-600/10 peer-checked:text-indigo-400 transition-all">Personal</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="category" value="Work" class="peer sr-only">
+                            <div class="text-center py-2 px-3 rounded-xl border border-slate-800 bg-slate-950 text-xs font-medium text-slate-400 peer-checked:border-amber-500 peer-checked:bg-amber-600/10 peer-checked:text-amber-400 transition-all">Work</div>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="category" value="Ideas" class="peer sr-only">
+                            <div class="text-center py-2 px-3 rounded-xl border border-slate-800 bg-slate-950 text-xs font-medium text-slate-400 peer-checked:border-emerald-500 peer-checked:bg-emerald-600/10 peer-checked:text-emerald-400 transition-all">Ideas</div>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold uppercase text-slate-400 mb-1.5">Notes (Optional)</label>
+                    <textarea id="taskNotes" rows="3" placeholder="Add extra details..." class="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500 transition-colors resize-none"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 active:scale-98 text-white font-semibold py-3.5 rounded-xl shadow-lg shadow-indigo-600/25 transition-all text-sm mt-2">
+                    Save Task
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application Script Logic -->
+    <script>
+        // --- State Management ---
+        let tasks = JSON.parse(localStorage.getItem('mobile_tasks_app')) || [
+            { id: 1, title: 'Welcome to your phone app!', category: 'Personal', notes: 'You can save this website to your smartphone home screen to use it like a real app.', completed: false, createdAt: Date.now() },
+            { id: 2, title: 'Tap check mark to complete', category: 'Work', notes: 'Tasks sync automatically to local storage.', completed: true, createdAt: Date.now() - 10000 }
+        ];
+
+        let activeFilter = 'all';
+
+        // --- DOM Elements ---
+        const taskList = document.getElementById('taskList');
+        const emptyState = document.getElementById('emptyState');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modalContent');
+        const addBtn = document.getElementById('addBtn');
+        const closeModal = document.getElementById('closeModal');
+        const taskForm = document.getElementById('taskForm');
+        const currentDateEl = document.getElementById('currentDate');
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const filterBtns = document.querySelectorAll('.filter-btn');
+
+        // --- Init Function ---
+        function init() {
+            // Set header date
+            const options = { weekday: 'short', month: 'short', day: 'numeric' };
+            currentDateEl.textContent = new Date().toLocaleDateString('en-US', options);
+
+            renderTasks();
+            setupEventListeners();
+            lucide.createIcons();
+        }
+
+        // --- Save State ---
+        function saveTasks() {
+            localStorage.setItem('mobile_tasks_app', JSON.stringify(tasks));
+        }
+
+        // --- Filter Helpers ---
+        function getFilteredTasks() {
+            if (activeFilter === 'all') return tasks;
+            if (activeFilter === 'completed') return tasks.filter(t => t.completed);
+            return tasks.filter(t => t.category === activeFilter);
+        }
+
+        function renderTasks() {
+            const filtered = getFilteredTasks();
+            taskList.innerHTML = '';
+
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+            }
+
+            filtered.sort((a,b) => b.createdAt - a.createdAt).forEach(task => {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-2xl bg-slate-900 border border-slate-800/80 shadow-md transition-all duration-200 flex flex-col gap-2 ${task.completed ? 'opacity-60' : ''}`;
+                
+                // Color badge map
+                const categoryColors = {
+                    Personal: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+                    Work: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+                    Ideas: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20'
+                };
+
+                const badgeClass = categoryColors[task.category] || 'text-slate-400 bg-slate-800';
+
+                card.innerHTML = `
+                    <div class="flex items-start justify-between gap-3">
+                        <div class="flex items-start gap-3 flex-1 min-w-0">
+                            <button onclick="toggleTask(${task.id})" class="mt-0.5 w-6 h-6 rounded-lg border ${task.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-700 bg-slate-950'} flex items-center justify-center transition-colors flex-shrink-0">
+                                ${task.completed ? '<i data-lucide="check" class="w-4 h-4 text-white"></i>' : ''}
+                            </button>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-sm font-semibold ${task.completed ? 'line-through text-slate-500' : 'text-slate-100'} break-words">${escapeHtml(task.title)}</h4>
+                                ${task.notes ? `<p class="text-xs text-slate-400 mt-1 leading-relaxed break-words">${escapeHtml(task.notes)}</p>` : ''}
+                            </div>
+                        </div>
+                        <button onclick="deleteTask(${task.id})" class="text-slate-600 hover:text-rose-400 p-1 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                    <div class="flex items-center justify-between pt-1 border-t border-slate-800/50 mt-1">
+                        <span class="text-[10px] font-semibold uppercase px-2 py-0.5 rounded-md border ${badgeClass}">
+                            ${task.category}
+                        </span>
+                        <span class="text-[10px] text-slate-500">
+                            ${new Date(task.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                    </div>
+                `;
+                taskList.appendChild(card);
+            });
+
+            updateProgress();
+            lucide.createIcons();
+        }
+
+        function updateProgress() {
+            if (tasks.length === 0) {
+                progressBar.style.width = '0%';
+                progressText.textContent = '0%';
+                return;
+            }
+            const completedCount = tasks.filter(t => t.completed).length;
+            const percentage = Math.round((completedCount / tasks.length) * 100);
+            progressBar.style.width = `${percentage}%`;
+            progressText.textContent = `${percentage}%`;
+        }
+
+        // --- Actions ---
+        window.toggleTask = function(id) {
+            tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+            saveTasks();
+            renderTasks();
+        };
+
+        window.deleteTask = function(id) {
+            tasks = tasks.filter(t => t.id !== id);
+            saveTasks();
+            renderTasks();
+        };
+
+        function openModal() {
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            modalContent.classList.remove('translate-y-full');
+            document.getElementById('taskTitle').focus();
+        }
+
+        function closeModalHandler() {
+            modalContent.classList.add('translate-y-full');
+            modal.classList.add('opacity-0', 'pointer-events-none');
+            taskForm.reset();
+        }
+
+        function setupEventListeners() {
+            addBtn.addEventListener('click', openModal);
+            closeModal.addEventListener('click', closeModalHandler);
+
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) closeModalHandler();
+            });
+
+            taskForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const title = document.getElementById('taskTitle').value.trim();
+                const notes = document.getElementById('taskNotes').value.trim();
+                const category = document.querySelector('input[name="category"]:checked').value;
+
+                if (!title) return;
+
+                const newTask = {
+                    id: Date.now(),
+                    title,
+                    notes,
+                    category,
+                    completed: false,
+                    createdAt: Date.now()
+                };
+
+                tasks.push(newTask);
+                saveTasks();
+                renderTasks();
+                closeModalHandler();
+            });
+
+            // Filter Tabs Toggle
+            filterBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    filterBtns.forEach(b => {
+                        b.classList.remove('bg-indigo-600', 'text-white');
+                        b.classList.add('bg-slate-800', 'text-slate-400');
+                    });
+                    btn.classList.remove('bg-slate-800', 'text-slate-400');
+                    btn.classList.add('bg-indigo-600', 'text-white');
+
+                    activeFilter = btn.dataset.filter;
+                    renderTasks();
+                });
+            });
+        }
+
+        // Helper string escaper
+        function escapeHtml(str) {
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+
+        // Launch
+        window.onload = init;
+    </script>
+</body>
+</html>
